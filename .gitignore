@@ -1,0 +1,9 @@
+.env
+google_credentials.json
+__pycache__/
+*.pyc
+*.pyo
+.streamlit/secrets.toml
+generated/
+*.docx
+!templates/contract_template.docx
