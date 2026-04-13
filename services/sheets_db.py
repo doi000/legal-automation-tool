@@ -43,6 +43,10 @@ SHEET_HEADERS = {
         "template_id", "template_name", "contract_type", "drive_url",
         "version", "is_active", "uploaded_at", "uploaded_by", "description",
     ],
+    "validation_rules": [
+        "rule_id", "target_template", "condition_field", "operator", "threshold",
+        "action_type", "action_value", "message", "is_active", "created_at", "created_by",
+    ],
 }
 
 
@@ -295,3 +299,24 @@ class SheetsDB:
 
     def deactivate_template(self, template_id: str):
         self._update_row("template_registry", "template_id", template_id, {"is_active": "false"})
+
+    # ------------------------------------------------------------------
+    # validation_rules
+    # ------------------------------------------------------------------
+    def get_active_validation_rules(self) -> list[dict]:
+        return [r for r in self._all_records("validation_rules") if str(r.get("is_active", "true")).lower() == "true"]
+
+    def get_all_validation_rules(self) -> list[dict]:
+        return self._all_records("validation_rules")
+
+    def add_validation_rule(self, rule: dict):
+        rule["rule_id"] = str(uuid.uuid4())[:8].upper()
+        rule["is_active"] = "true"
+        rule["created_at"] = datetime.now().isoformat()
+        self._append_row("validation_rules", rule)
+
+    def update_validation_rule(self, rule_id: str, updates: dict):
+        self._update_row("validation_rules", "rule_id", rule_id, updates)
+
+    def delete_validation_rule(self, rule_id: str):
+        self._delete_row("validation_rules", "rule_id", rule_id)

@@ -9,6 +9,7 @@ from services.ai_agent import AIAgent
 from services.kintone_api import KintoneClient
 from services.word_generator import WordGenerator
 from services.drive_uploader import DriveUploader
+from services.rule_engine import RuleEngine
 
 _FALLBACK_TEMPLATE = os.path.join(os.path.dirname(__file__), "..", "assets", "templates", "default.docx")
 _DEFAULT_TEMPLATE  = os.path.join(os.path.dirname(__file__), "..", "templates", "contract_template.docx")
@@ -50,8 +51,15 @@ def show(db):
                     try:
                         agent = AIAgent()
                         result = agent.analyze_request(request_text)
-                        st.session_state["ai_result"] = result.model_dump()
+                        ai_data = result.model_dump()
+                        st.session_state["ai_result"] = ai_data
                         st.session_state["request_text"] = request_text
+                        # フォームフィールドをAI結果で更新（リアルタイム反映用）
+                        for fname, val in ai_data.items():
+                            if val and fname != "expected_conclusion_date":
+                                st.session_state[f"f_{fname}"] = str(val)
+                        if ai_data.get("expected_conclusion_date"):
+                            st.session_state["f_scheduled_date"] = ai_data["expected_conclusion_date"]
                         st.success("✅ 解析完了")
                         st.rerun()
                     except Exception as e:
@@ -256,16 +264,44 @@ def _render_word_form(db, user, role, tx):
     else:
         template_vars = []
 
+    # ── 案件切り替え時にフォームをリセット ──
+    curr_rid = st.session_state.get("current_request_id")
+    if st.session_state.get("_form_request_id") != curr_rid:
+        for k in [k for k in st.session_state if k.startswith("f_")]:
+            del st.session_state[k]
+        st.session_state["_form_request_id"] = curr_rid
+
     # ── 動的フォーム生成 ──
     defaults = _get_defaults(tx)
     params, meta = _build_dynamic_form(template_vars, defaults, user, tx, role)
 
+    # ── バリデーション（決定論的ルールエンジン）──
+    rules    = db.get_active_validation_rules()
+    engine   = RuleEngine(rules)
+    v_results = engine.validate({**params, **meta}, selected_tmpl)
+
+    errors   = [r for r in v_results if r.action_type == "ERROR"]
+    warnings = [r for r in v_results if r.action_type == "WARNING"]
+    forced   = RuleEngine.get_force_approvers(v_results)
+
+    for err in errors:
+        st.error(f"エラー: {err.rule_message}")
+    for warn in warnings:
+        st.warning(f"警告: {warn.rule_message}")
+    if forced:
+        st.info(f"承認者が自動追加されます: {', '.join(forced)}")
+
+    has_errors = bool(errors)
+
     col_gen, col_approve = st.columns(2)
-    generate_btn = col_gen.button("📄 Word生成", type="primary", use_container_width=True, key="gen_btn")
-    approve_btn  = col_approve.button(
+    generate_btn = col_gen.button(
+        "📄 Word生成", type="primary", use_container_width=True, key="gen_btn",
+        disabled=has_errors,
+    )
+    approve_btn = col_approve.button(
         "✅ 承認申請",
         use_container_width=True,
-        disabled=(role == "Sales"),
+        disabled=(role == "Sales" or has_errors),
         key="approve_btn",
     )
 
@@ -299,46 +335,40 @@ def _build_dynamic_form(
 
     params: dict = {}
     if template_vars:
-        # contract_type はデフォルト値から自動セット（フォームには出さない）
         params["contract_type"] = defaults.get("contract_type", "業務委託契約")
 
-    with st.form("word_form"):
-        # ── 変数フォーム ──
-        for var in form_vars:
-            label, input_type, required = WordGenerator.get_field_info(var)
-            label_display = f"{label} {'*' if required else ''}"
-            default_val = defaults.get(var, "")
+    # ── 変数フォーム（st.form なし → フィールド変更ごとにリアルタイム再検証）──
+    for var in form_vars:
+        label, input_type, required = WordGenerator.get_field_info(var)
+        label_display = f"{label} {'*' if required else ''}"
+        default_val = defaults.get(var, "")
 
-            if input_type == "textarea":
-                params[var] = st.text_area(label_display, value=default_val, height=80, key=f"f_{var}")
-            elif input_type == "date":
-                params[var] = st.text_input(label_display, value=default_val, placeholder="YYYY-MM-DD", key=f"f_{var}")
-            elif input_type == "hidden":
-                params[var] = default_val  # フォームに出さずそのまま
-            else:
-                params[var] = st.text_input(label_display, value=default_val, key=f"f_{var}")
+        if input_type == "textarea":
+            params[var] = st.text_area(label_display, value=default_val, height=80, key=f"f_{var}")
+        elif input_type == "date":
+            params[var] = st.text_input(label_display, value=default_val, placeholder="YYYY-MM-DD", key=f"f_{var}")
+        elif input_type == "hidden":
+            params[var] = default_val
+        else:
+            params[var] = st.text_input(label_display, value=default_val, key=f"f_{var}")
 
-        st.markdown("---")
-        st.markdown("**案件管理情報**")
-        col_m1, col_m2 = st.columns(2)
+    st.markdown("---")
+    st.markdown("**案件管理情報**")
+    col_m1, col_m2 = st.columns(2)
 
-        # 締結予定日: AI抽出結果 or 既存トランザクションから自動補完
-        scheduled_default = (
-            defaults.get("expected_conclusion_date")   # AI が抽出した締結希望日
-            or (tx or {}).get("scheduled_date", "")
-        )
-        scheduled_date = col_m1.text_input(
-            "締結予定日", value=scheduled_default, placeholder="YYYY-MM-DD"
-        )
-        sales_person   = col_m2.text_input(
-            "営業担当", value=(tx or {}).get("sales_person", user.get("name", ""))
-        )
-        editor_person  = st.text_input(
-            "作業担当", value=(tx or {}).get("editor_person", "")
-        )
-
-        # ── フォーム送信ボタンはフォーム外で管理するため、ここでは dummy ──
-        st.form_submit_button("（このボタンは使用しません）", disabled=True)
+    scheduled_default = (
+        defaults.get("expected_conclusion_date")
+        or (tx or {}).get("scheduled_date", "")
+    )
+    scheduled_date = col_m1.text_input(
+        "締結予定日", value=scheduled_default, placeholder="YYYY-MM-DD", key="f_scheduled_date"
+    )
+    sales_person = col_m2.text_input(
+        "営業担当", value=(tx or {}).get("sales_person", user.get("name", "")), key="f_sales_person"
+    )
+    editor_person = st.text_input(
+        "作業担当", value=(tx or {}).get("editor_person", ""), key="f_editor_person"
+    )
 
     meta = {
         "scheduled_date": scheduled_date,

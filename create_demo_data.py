@@ -157,7 +157,64 @@ def inject_demo_data(db: SheetsDB):
     print(f"[OK] Transactions: {len(demo_transactions)} total, {new_count} newly added")
 
     # ──────────────────────────────────────────
-    # 5. サマリー
+    # 5. バリデーションルール（決定論的エンジン用）
+    # ──────────────────────────────────────────
+    demo_vr = [
+        {
+            "target_template": "共通",
+            "condition_field": "scheduled_date",
+            "operator":        "is_empty",
+            "threshold":       "",
+            "action_type":     "ERROR",
+            "action_value":    "",
+            "message":         "締結予定日を入力してください",
+            "created_by":      "admin_user1@example.com",
+        },
+        {
+            "target_template": "共通",
+            "condition_field": "company_name",
+            "operator":        "is_empty",
+            "threshold":       "",
+            "action_type":     "ERROR",
+            "action_value":    "",
+            "message":         "顧客名を入力してください",
+            "created_by":      "admin_user1@example.com",
+        },
+        {
+            "target_template": "共通",
+            "condition_field": "contract_amount",
+            "operator":        "greater_than",
+            "threshold":       "1000000",
+            "action_type":     "FORCE_APPROVER",
+            "action_value":    "admin_user1@example.com",
+            "message":         "100万円超の契約は管理者承認が必要です",
+            "created_by":      "admin_user1@example.com",
+        },
+        {
+            "target_template": "共通",
+            "condition_field": "contract_amount",
+            "operator":        "greater_than",
+            "threshold":       "5000000",
+            "action_type":     "WARNING",
+            "action_value":    "",
+            "message":         "500万円超の高額契約です。内容を再確認してください",
+            "created_by":      "admin_user1@example.com",
+        },
+    ]
+    existing_vr_keys = {
+        f"{r.get('condition_field')}|{r.get('operator')}|{r.get('threshold')}|{r.get('action_type')}"
+        for r in db.get_all_validation_rules()
+    }
+    added_vr = 0
+    for rule in demo_vr:
+        key = f"{rule['condition_field']}|{rule['operator']}|{rule['threshold']}|{rule['action_type']}"
+        if key not in existing_vr_keys:
+            db.add_validation_rule(rule)
+            added_vr += 1
+    print(f"[OK] ValidationRules: {len(demo_vr)} (added: {added_vr})")
+
+    # ──────────────────────────────────────────
+    # 6. サマリー
     # ──────────────────────────────────────────
     from datetime import date
     today_date = date.today()
@@ -181,10 +238,11 @@ def inject_demo_data(db: SheetsDB):
     print(f"  Overdue({len(overdue_list)}): {overdue_list}")
     print(f"  Workflow:    {len(db.get_workflow())} steps")
     print(f"  Rules:       {len(db.get_all_review_rules())}")
+    print(f"  ValRules:    {len(db.get_all_validation_rules())}")
     print("\nRun: python -m streamlit run app.py")
 
 
 if __name__ == "__main__":
-    print("=== Injecting v1.4 demo data ===")
+    print("=== Injecting v1.7 demo data ===")
     db = SheetsDB()
     inject_demo_data(db)
