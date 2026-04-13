@@ -78,28 +78,40 @@ def inject_demo_data(db: SheetsDB):
 
     demo_transactions = [
         # ── 未着手 ──
-        {"title": "株式会社フューチャーテック - 業務委託契約",
+        {"title": "株式会社フューチャーテック - 利用申込書",
          "requester_email": "sales_user1@example.com", "status": "未着手",
          "scheduled_date": D(30), "sales_person": "営業 一郎", "editor_person": "",
+         "customer_name": "株式会社フューチャーテック", "contract_type": "利用申込書",
+         "amount": "500,000円/月", "period_start": D(35), "period_end": D(365),
+         "special_terms": "自動更新条項を追加したい", "sales_comment": "先方の要望でサービス開始を来月に前倒し",
          "history": [("未着手", "sales_user1@example.com", "新規依頼")]},
 
         {"title": "合同会社スマートワーク - NDA",
          "requester_email": "sales_user2@example.com", "status": "未着手",
          "scheduled_date": D(-5),   # ★ 期限超過
          "sales_person": "営業 二子", "editor_person": "",
+         "customer_name": "合同会社スマートワーク", "contract_type": "NDA",
+         "amount": "", "period_start": D(1), "period_end": D(365),
+         "special_terms": "", "sales_comment": "急ぎ対応お願いします（締結日過ぎています）",
          "history": [("未着手", "sales_user2@example.com", "新規依頼")]},
 
         # ── 作業中 ──
         {"title": "株式会社グローバルソリューション - 業務委託契約",
          "requester_email": "sales_user1@example.com", "status": "作業中",
          "scheduled_date": D(14), "sales_person": "営業 一郎", "editor_person": "法務 三郎",
+         "customer_name": "株式会社グローバルソリューション", "contract_type": "業務委託契約",
+         "amount": "1,200,000円/月", "period_start": D(20), "period_end": D(385),
+         "special_terms": "支払いサイトを60日に変更希望", "sales_comment": "前回から金額アップ・期間延長",
          "history": [("未着手", "sales_user1@example.com", "新規依頼"),
-                     ("作業中",  "editor_user1@example.com", "AI解析・Word生成完了")]},
+                     ("作業中",  "editor_user1@example.com", "Gemini分析・Word生成完了")]},
 
-        {"title": "有限会社テックイノベーション - 売買契約",
+        {"title": "有限会社テックイノベーション - 覚書",
          "requester_email": "sales_user2@example.com", "status": "作業中",
          "scheduled_date": D(-3),   # ★ 期限超過
          "sales_person": "営業 二子", "editor_person": "法務 四子",
+         "customer_name": "有限会社テックイノベーション", "contract_type": "覚書",
+         "amount": "300,000円", "period_start": D(1), "period_end": D(180),
+         "special_terms": "免責事項の範囲を縮小", "sales_comment": "",
          "history": [("未着手", "sales_user2@example.com", "新規依頼"),
                      ("作業中",  "editor_user2@example.com", "kintone確認・Word生成")]},
 
@@ -107,6 +119,9 @@ def inject_demo_data(db: SheetsDB):
         {"title": "株式会社デジタルパートナーズ - 業務委託契約",
          "requester_email": "sales_user1@example.com", "status": "承認待ち",
          "scheduled_date": D(5), "sales_person": "営業 一郎", "editor_person": "法務 三郎",
+         "customer_name": "株式会社デジタルパートナーズ", "contract_type": "業務委託契約",
+         "amount": "2,500,000円/月", "period_start": D(10), "period_end": D(375),
+         "special_terms": "競業避止義務の追加", "sales_comment": "高額案件につき優先対応",
          "history": [("未着手",   "sales_user1@example.com",  "新規依頼"),
                      ("作業中",   "editor_user1@example.com", "Word生成完了"),
                      ("承認待ち", "editor_user1@example.com", "承認申請")]},
@@ -115,6 +130,9 @@ def inject_demo_data(db: SheetsDB):
          "requester_email": "sales_user2@example.com", "status": "承認待ち",
          "scheduled_date": D(-2),   # ★ 期限超過
          "sales_person": "営業 二子", "editor_person": "法務 四子",
+         "customer_name": "株式会社クリエイティブラボ", "contract_type": "NDA",
+         "amount": "", "period_start": D(1), "period_end": D(730),
+         "special_terms": "第三者への開示禁止期間を10年に延長", "sales_comment": "締結日超過のため急ぎ",
          "history": [("未着手",   "sales_user2@example.com",  "新規依頼"),
                      ("作業中",   "editor_user2@example.com", "ドキュメント準備"),
                      ("承認待ち", "editor_user2@example.com", "最終確認依頼")]},
@@ -123,14 +141,20 @@ def inject_demo_data(db: SheetsDB):
         {"title": "株式会社サンプルコーポレーション - 業務委託契約",
          "requester_email": "sales_user1@example.com", "status": "完了",
          "scheduled_date": D(-10), "sales_person": "営業 一郎", "editor_person": "法務 三郎",
+         "customer_name": "株式会社サンプルコーポレーション", "contract_type": "業務委託契約",
+         "amount": "800,000円/月", "period_start": D(-5), "period_end": D(360),
+         "special_terms": "", "sales_comment": "",
          "history": [("未着手",   "sales_user1@example.com",  "新規依頼"),
                      ("作業中",   "editor_user1@example.com", "Word生成完了"),
                      ("承認待ち", "editor_user1@example.com", "承認申請"),
                      ("完了",     "admin_user1@example.com",  "承認完了")]},
 
-        {"title": "有限会社リアルエステート - 売買契約",
+        {"title": "有限会社リアルエステート - 利用申込書",
          "requester_email": "sales_user2@example.com", "status": "完了",
          "scheduled_date": D(-5), "sales_person": "営業 二子", "editor_person": "法務 四子",
+         "customer_name": "有限会社リアルエステート", "contract_type": "利用申込書",
+         "amount": "150,000円/月", "period_start": D(-3), "period_end": D(362),
+         "special_terms": "", "sales_comment": "",
          "history": [("未着手",   "sales_user2@example.com",  "新規依頼"),
                      ("作業中",   "editor_user2@example.com", "書類作成"),
                      ("承認待ち", "editor_user2@example.com", "承認申請"),
@@ -147,6 +171,13 @@ def inject_demo_data(db: SheetsDB):
             scheduled_date=demo_tx["scheduled_date"],
             sales_person=demo_tx["sales_person"],
             editor_person=demo_tx["editor_person"],
+            customer_name=demo_tx.get("customer_name", ""),
+            contract_type=demo_tx.get("contract_type", ""),
+            amount=demo_tx.get("amount", ""),
+            period_start=demo_tx.get("period_start", ""),
+            period_end=demo_tx.get("period_end", ""),
+            special_terms=demo_tx.get("special_terms", ""),
+            sales_comment=demo_tx.get("sales_comment", ""),
         )
         for i, (status, changed_by, comment) in enumerate(demo_tx["history"]):
             if i == 0:

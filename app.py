@@ -121,10 +121,12 @@ def main():
         ]
 
     # ─────────────────────────────────────────────
-    # ダッシュボード「開く」ボタンからのページ遷移
+    # ページ遷移フラグの処理
     # ─────────────────────────────────────────────
     if st.session_state.pop("_nav_to_workspace", False):
         st.switch_page(work_page)
+    if st.session_state.pop("_nav_to_dashboard", False):
+        st.switch_page(dash_page)
 
     pg = st.navigation(nav_structure)
 

@@ -21,6 +21,9 @@ SHEET_HEADERS = {
         "request_id", "title", "requester_email", "status",
         "current_version", "created_at", "last_updated_at",
         "scheduled_date", "sales_person", "editor_person",
+        # v1.5: Sales フォーム入力フィールド
+        "customer_name", "contract_type", "amount",
+        "period_start", "period_end", "special_terms", "sales_comment",
     ],
     "status_history": [
         "history_id", "request_id", "version", "status",
@@ -169,6 +172,13 @@ class SheetsDB:
         scheduled_date: str = "",
         sales_person: str = "",
         editor_person: str = "",
+        customer_name: str = "",
+        contract_type: str = "",
+        amount: str = "",
+        period_start: str = "",
+        period_end: str = "",
+        special_terms: str = "",
+        sales_comment: str = "",
     ) -> str:
         request_id = str(uuid.uuid4())[:8].upper()
         now = datetime.now().isoformat()
@@ -183,6 +193,13 @@ class SheetsDB:
             "scheduled_date": scheduled_date,
             "sales_person": sales_person,
             "editor_person": editor_person,
+            "customer_name": customer_name,
+            "contract_type": contract_type,
+            "amount": amount,
+            "period_start": period_start,
+            "period_end": period_end,
+            "special_terms": special_terms,
+            "sales_comment": sales_comment,
         })
         return request_id
 
